@@ -1,16 +1,21 @@
 name: build64
 
-on: workflow_dispatch
+on: push
 
 jobs:
   GenerateWinStaticBinaries:
-    runs-on: windows-2019
+    runs-on: windows-2022
+
+    strategy:
+      fail-fast: false
+      matrix:
+        qt_version: ["6.5.3", "6.6.0"]
 
     steps:
     - name: Clone repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Install Python 3.7 version
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: '3.7'
         architecture: 'x64'
@@ -18,25 +23,31 @@ jobs:
       run: |
         # Clone Qt6 repo
         cd ..
-        git clone https://code.qt.io/qt/qt5.git -b 6.3
+        git clone https://code.qt.io/qt/qt5.git -b ${{ matrix.qt_version }}
         cd qt5
-        perl init-repository -f --module-subset=qt5compat,qt3d,qtbase,qtcharts,qtdeclarative,qtimageformats,qtlanguageserver,qtmqtt,qtmultimedia,qtnetworkauth,qtquick3d,qtquicktimeline,qtserialbus,qtserialport,qtshadertools,qtsvg,qtwebchannel,qtwebengine,qtwebsockets,qtwebview
+        perl init-repository -f --module-subset=qtbase,qtsvg,qttools
         # Create shadow build folder
         cd ..
         mkdir qt6_shadow
         cd qt6_shadow
         # Setup the compiler
-        cmd.exe /c "call `"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat`" && set > %temp%\vcvars.txt"
+        cmd.exe /c "call `"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat`" && set > %temp%\vcvars.txt"
         Get-Content "$env:temp\vcvars.txt" | Foreach-Object { if ($_ -match "^(.*?)=(.*)$") { Set-Content "env:\$($matches[1])" $matches[2] } }
         # Configure Qt5
-        ..\qt5\configure.bat -release -static -static-runtime -no-pch -optimize-size -platform win32-msvc -prefix "..\Qt6_binaries" -no-feature-accessibility -confirm-license
+        ..\qt5\configure.bat -release -static -static-runtime -no-pch -optimize-size -platform win32-msvc -no-sql-db2 -no-sql-ibase -no-sql-mysql -no-sql-oci -no-sql-odbc -no-sql-psql -prefix "..\Qt6_binaries" -no-feature-accessibility -confirm-license
         cmake --build . --parallel 4
         cmake --install .
     - name: Package binaries
       run: |
         # Create archive of the pre-built Qt binaries
-        7z a qt6_630_static_64.zip ..\Qt6_binaries
-    - uses: actions/upload-artifact@v1
+        7z a qt6_${{ matrix.qt_version }}_static_64.7z ..\Qt6_binaries
+    - uses: actions/upload-artifact@v3
       with:
-        name: qt6_630_static_64.zip
-        path: qt6_630_static_64.zip
+        name: qt6_${{ matrix.qt_version }}_static_64.7z
+        path: qt6_${{ matrix.qt_version }}_static_64.7z
+    - name: Upload Release
+      uses: softprops/action-gh-release@v1
+      if: ${{  success() }}
+      with:
+        tag_name: qt6_static_64
+        files: qt6_${{ matrix.qt_version }}_static_64.7z
