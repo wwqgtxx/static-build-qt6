@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        qt_version: ["6.5.3", "6.6.0"]
+        qt_version: ["6.5.3", "6.6.0", "6.6.1"]
 
     steps:
     - name: Clone repository
