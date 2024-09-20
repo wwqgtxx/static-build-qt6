@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        qt_version: ["6.5.3", "6.6.0", "6.6.1"]
+        qt_version: ["6.5.0", "6.5.1", "6.5.2", "6.5.3", "6.6.0", "6.6.1", "6.6.2", "6.6.3", "6.7.0", "6.7.1", "6.7.2", "6.7.3"]
 
     steps:
     - name: Clone repository
@@ -23,7 +23,7 @@ jobs:
       run: |
         # Clone Qt6 repo
         cd ..
-        git clone https://code.qt.io/qt/qt5.git -b ${{ matrix.qt_version }}
+        git clone https://code.qt.io/qt/qt5.git -b v${{ matrix.qt_version }}
         cd qt5
         perl init-repository -f --module-subset=qtbase,qtsvg,qttools
         # Create shadow build folder
